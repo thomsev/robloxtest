@@ -3,6 +3,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,6 +16,7 @@ local SmashService = {}
 
 local smashCooldown: { [BasePart]: number } = {}
 local stompCooldown: { [Player]: number } = {}
+local playerBumpCooldown: { [string]: number } = {}
 
 local stompEvent = Remotes.getStompRequestEvent()
 
@@ -41,6 +43,14 @@ local function respawn(part: BasePart, originalCF: CFrame, respawnSeconds: numbe
 	end)
 end
 
+local function applyKnockback(targetRoot: BasePart, sourceRoot: BasePart, force: number)
+	local dir = (targetRoot.Position - sourceRoot.Position)
+	if dir.Magnitude < 0.1 then
+		dir = Vector3.new(0, 0, 1)
+	end
+	targetRoot:ApplyImpulse((dir.Unit + Vector3.new(0, 0.35, 0)) * force * targetRoot.AssemblyMass)
+end
+
 local function handleSmash(part: BasePart, player: Player, sizeService, currencyService, upgradeService, effectsService)
 	if smashCooldown[part] and os.clock() - smashCooldown[part] < 0.4 then
 		return
@@ -62,8 +72,9 @@ local function handleSmash(part: BasePart, player: Player, sizeService, currency
 	local mult = upgradeService.SmashMultiplier(player)
 	sizeService.AddSize(player, cfg.RewardSize * mult, effectsService, upgradeService)
 	currencyService.AddCoins(player, math.floor(cfg.RewardCoins * mult))
+	currencyService.AddTokens(player, cfg.RewardTokens)
 	effectsService.Emit(player, "Smash", { Kind = kind, Reward = cfg.RewardCoins })
-	effectsService.Feedback(player, "SMASHED!")
+	effectsService.Feedback(player, "+SMASH TOKENS")
 
 	local originalCF = part.CFrame
 	breakFx(part)
@@ -93,6 +104,45 @@ local function launchObstacle(part: BasePart)
 	end)
 end
 
+local function wireNPC(npcRoot: BasePart, sizeService, currencyService, upgradeService, effectsService)
+	npcRoot.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		if not player then
+			return
+		end
+		local playerRoot = Util.getRootPart(hit.Parent)
+		if not playerRoot then
+			return
+		end
+		local playerSize = sizeService.GetSize(player)
+		if playerSize >= Config.Smashables.NPC.RequiredSize then
+			handleSmash(npcRoot, player, sizeService, currencyService, upgradeService, effectsService)
+			applyKnockback(npcRoot, playerRoot, 35)
+		else
+			local resist = 1 - math.clamp(upgradeService.KnockbackResistance(player), 0, 0.65)
+			applyKnockback(playerRoot, npcRoot, ((npcRoot:GetAttribute("Force") or 80) :: number) * resist)
+			effectsService.Feedback(player, "NPC SHOVED YOU")
+		end
+	end)
+
+	task.spawn(function()
+		while npcRoot.Parent do
+			local a = (npcRoot:GetAttribute("PatrolA") or (npcRoot.Position.X - 6)) :: number
+			local b = (npcRoot:GetAttribute("PatrolB") or (npcRoot.Position.X + 6)) :: number
+			local target = Vector3.new(a, npcRoot.Position.Y, npcRoot.Position.Z)
+			for i = 1, 30 do
+				npcRoot.CFrame = npcRoot.CFrame:Lerp(CFrame.new(target), 0.08)
+				task.wait(0.05)
+			end
+			target = Vector3.new(b, npcRoot.Position.Y, npcRoot.Position.Z)
+			for i = 1, 30 do
+				npcRoot.CFrame = npcRoot.CFrame:Lerp(CFrame.new(target), 0.08)
+				task.wait(0.05)
+			end
+		end
+	end)
+end
+
 function SmashService.Init(sizeService, currencyService, upgradeService, effectsService)
 	local function wireSmashable(instance)
 		if not instance:IsA("BasePart") then
@@ -110,6 +160,52 @@ function SmashService.Init(sizeService, currencyService, upgradeService, effects
 		wireSmashable(instance)
 	end
 	CollectionService:GetInstanceAddedSignal(Constants.TAG_SMASHABLE):Connect(wireSmashable)
+
+	for _, instance in ipairs(CollectionService:GetTagged(Constants.TAG_NPC)) do
+		if instance:IsA("BasePart") then
+			wireNPC(instance, sizeService, currencyService, upgradeService, effectsService)
+		end
+	end
+	CollectionService:GetInstanceAddedSignal(Constants.TAG_NPC):Connect(function(instance)
+		if instance:IsA("BasePart") then
+			wireNPC(instance, sizeService, currencyService, upgradeService, effectsService)
+		end
+	end)
+
+	for _, zone in ipairs(CollectionService:GetTagged(Constants.TAG_COLLISION_ZONE)) do
+		if zone:IsA("BasePart") then
+			zone.Touched:Connect(function(hit)
+				local player = Players:GetPlayerFromCharacter(hit.Parent)
+				if not player then
+					return
+				end
+				local root = Util.getRootPart(hit.Parent)
+				if not root then
+					return
+				end
+				for _, other in ipairs(Players:GetPlayers()) do
+					if other ~= player then
+						local otherRoot = Util.getRootPart(Util.getCharacter(other))
+						if otherRoot and (otherRoot.Position - root.Position).Magnitude < 8 then
+							local key = tostring(math.min(player.UserId, other.UserId)) .. ":" .. tostring(math.max(player.UserId, other.UserId))
+							if playerBumpCooldown[key] and os.clock() - playerBumpCooldown[key] < 2 then
+								continue
+							end
+							playerBumpCooldown[key] = os.clock()
+							local diff = sizeService.GetSize(player) - sizeService.GetSize(other)
+							if math.abs(diff) > 5 then
+								if diff > 0 then
+									applyKnockback(otherRoot, root, ((zone:GetAttribute("Knockback") or 45) :: number))
+								else
+									applyKnockback(root, otherRoot, ((zone:GetAttribute("Knockback") or 45) :: number))
+								end
+							end
+						end
+					end
+				end
+			end)
+		end
+	end
 
 	local function wireObstacle(instance)
 		if not instance:IsA("BasePart") then
@@ -161,5 +257,13 @@ function SmashService.Init(sizeService, currencyService, upgradeService, effects
 		end
 	end)
 end
+
+RunService.Stepped:Connect(function()
+	for key, time in pairs(playerBumpCooldown) do
+		if os.clock() - time > 10 then
+			playerBumpCooldown[key] = nil
+		end
+	end
+end)
 
 return SmashService

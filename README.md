@@ -1,68 +1,26 @@
-# Run → Grow Obby (Rojo + Roblox Studio)
+# Run → Grow → Smash Front-Page Loop (Rojo + Roblox Studio)
 
-MVP Roblox obby where players grow by moving, pass size-gated obstacles, get treadmill growth boosts, and can rebirth for a permanent growth multiplier.
+This project is now structured like a front-page retention game: players spawn in a social lobby, choose worlds through portals, climb vertical speed-based obbies, smash interferers for premium currency, and rebirth for long-term power.
 
-## Features
-- **Distance-based growth** (server authoritative).
-- **Size gates** with server teleport-back enforcement.
-- **Treadmills** tagged with `CollectionService` that boost growth.
-- **Rebirth pad** with size requirement and multiplier progression.
-- **Generated map** on server start (playable immediately).
-- **Leaderstats** for Size + Rebirths.
-- **Data persistence** with resilient DataStore saves.
+## Session loop (10–20 min target)
+1. **Lobby (0–60s):** instant growth via treadmills + movement pulse rewards, clear objective in HUD, visible giant players.
+2. **World run (1–6 min):** stacked vertical levels, narrower high lanes, tighter jumps as speed rises.
+3. **Chaos moments:** NPC interferers shove small players; big players smash NPCs for Smash Tokens.
+4. **Checkpoint loop:** fail a jump → back to latest checkpoint, not full reset.
+5. **Completion + unlock:** world finish grants coins and unlocks next portal progression.
+6. **Rebirth spectacle:** reset size, keep mastery/upgrades/currencies, unlock deeper worlds + stronger chaos potential.
 
-## Project structure
-- `src/shared`: config/constants/util/remotes
-- `src/server`: bootstrap + gameplay services
-- `src/client`: HUD and toast feedback
+## Progression layers
+- **Physical power:** Size, speed scaling, smash power, stomp.
+- **World progression:** Portal unlocks, vertical world clears, checkpoints.
+- **Long-term progression:** Rebirths, Smash Tokens, cosmetics/assist upgrades.
 
-## Setup
-1. Install [Aftman](https://aftman.dev) (optional) and Rojo.
-2. Install Rojo directly if needed:
-   - `cargo install rojo`
-3. Clone this repo and open in VS Code.
-4. Start Rojo server in project root:
-   - `rojo serve`
-5. In Roblox Studio:
-   - Install the Rojo plugin.
-   - Open any place.
-   - Connect plugin to `localhost:34872`.
-6. Press **Play** (or Start Server test described below).
+## Current architecture
+- **Server-authoritative:** size, speed, currency, portals, checkpoints, smashing, collision knockback.
+- **Client-authoritative only for:** UI, visual effects, feedback.
+- **CollectionService tags used for:** `WorldPortal`, `Treadmill`, `Checkpoint`, `Smashable`, `InterfererNPC`, `CollisionZone`.
 
-## Testing in Studio
-### Single-player smoke test
-1. Spawn into `GeneratedMap`.
-2. Run forward on the track: **Size should increase** steadily.
-3. Enter first gate while too small: **you should be teleported back** and see toast.
-4. Step on treadmill areas: growth should feel faster.
-5. Reach end and touch rebirth pad at size >= 100: rebirth triggers and size resets.
-
-### Multiplayer test (recommended)
-1. In Studio Test tab, click **Start Server** with **2 Players**.
-2. Verify both players grow independently.
-3. Confirm gate checks are per-player and server-enforced.
-4. Confirm treadmill boost is only applied to players touching treadmill.
-5. Verify data saves by stopping test and re-running (Studio API access may be required for DataStore).
-
-## Tuning defaults
-Tweak in `src/shared/Config.lua`:
-- `GrowthPerMeter`
-- `TreadmillBoostMultiplier`
-- `MaxSize`
-- `GateRequirements`
-- `RebirthRequiredSize`
-- `AntiExploit` limits
-
-## LEGO/toy-brick style notes
-Current map uses bright primary colors + studs surfaces + a few lightweight stud bump parts.
-
-To swap in richer visuals later without gameplay code changes:
-1. Add `SurfaceAppearance` or textures to map parts in Studio.
-2. Keep part names/tags/attributes the same (`SizeGate`, `Treadmill`, `RequiredSize`, `BoostMultiplier`).
-3. If replacing generated map with a handcrafted one, still include `GeneratedMap` model or disable bootstrap.
-
-## Security notes
-- Clients never set Size/Rebirth values.
-- Server computes movement growth and clamps exploit-like spikes.
-- Growth delta is clamped per tick.
-- Size scaling is throttled and re-applied on respawn.
+## Run
+1. `rojo serve`
+2. Connect from Roblox Studio via Rojo plugin.
+3. Play (recommended multiplayer server test for collision chaos + NPC interference).

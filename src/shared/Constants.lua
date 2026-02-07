@@ -5,7 +5,9 @@ local Constants = {
 	ATTR_REBIRTHS = "Rebirths",
 	ATTR_CHECKPOINT = "Checkpoint",
 	ATTR_COINS = "Coins",
+	ATTR_SMASH_TOKENS = "SmashTokens",
 	ATTR_WORLD = "World",
+	ATTR_WORLD_UNLOCK = "WorldUnlock",
 	ATTR_SPEED_LEVEL = "SpeedLevel",
 	ATTR_GROWTH_LEVEL = "GrowthLevel",
 	ATTR_SMASH_LEVEL = "SmashLevel",
@@ -25,6 +27,9 @@ local Constants = {
 	TAG_TREADMILL = "Treadmill",
 	TAG_WORLD_PORTAL = "WorldPortal",
 	TAG_OBSTACLE = "Obstacle",
+	TAG_CHECKPOINT = "Checkpoint",
+	TAG_NPC = "InterfererNPC",
+	TAG_COLLISION_ZONE = "CollisionZone",
 }
 
 return Constants
