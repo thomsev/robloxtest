@@ -23,116 +23,87 @@ local function requireModuleFrom(parent: Instance, moduleName: string): any?
 		warn(STARTUP_TAG, ("Missing ModuleScript '%s' under %s"):format(moduleName, parent:GetFullName()))
 		return nil
 	end
-
 	local ok, result = pcall(require, module)
 	if not ok then
 		warn(STARTUP_TAG, ("Failed requiring '%s': %s"):format(module:GetFullName(), tostring(result)))
 		return nil
 	end
-
 	return result
 end
 
-print(STARTUP_TAG, "Starting server bootstrap")
-
 local sharedFolder = waitForChildWithTimeout(ReplicatedStorage, "Shared", LOOKUP_TIMEOUT)
-if not sharedFolder or not sharedFolder:IsA("Folder") then
-	warn(STARTUP_TAG, "ReplicatedStorage/Shared not found. Check Rojo mapping for src/shared -> ReplicatedStorage/Shared.")
+if not sharedFolder then
+	warn(STARTUP_TAG, "ReplicatedStorage/Shared missing")
 	return
 end
-print(STARTUP_TAG, "Found shared folder:", sharedFolder:GetFullName())
 
 local Config = requireModuleFrom(sharedFolder, "Config")
-local Remotes = requireModuleFrom(sharedFolder, "Remotes")
-if not Config or not Remotes then
-	warn(STARTUP_TAG, "Shared modules failed to load. Aborting server startup.")
+local Constants = requireModuleFrom(sharedFolder, "Constants")
+if not Config or not Constants then
 	return
 end
 
 local servicesFolder = waitForChildWithTimeout(script.Parent, "services", LOOKUP_TIMEOUT)
-if not servicesFolder or not servicesFolder:IsA("Folder") then
-	warn(STARTUP_TAG, ("Missing services folder under %s"):format(script.Parent:GetFullName()))
+if not servicesFolder then
+	warn(STARTUP_TAG, "Missing services folder")
 	return
 end
-print(STARTUP_TAG, "Found services folder:", servicesFolder:GetFullName())
 
 local MapBootstrapService = requireModuleFrom(servicesFolder, "MapBootstrapService")
+local EffectsService = requireModuleFrom(servicesFolder, "EffectsService")
 local SizeService = requireModuleFrom(servicesFolder, "SizeService")
+local CurrencyService = requireModuleFrom(servicesFolder, "CurrencyService")
+local UpgradeService = requireModuleFrom(servicesFolder, "UpgradeService")
 local TreadmillService = requireModuleFrom(servicesFolder, "TreadmillService")
 local GateService = requireModuleFrom(servicesFolder, "GateService")
 local MovementGrowthService = requireModuleFrom(servicesFolder, "MovementGrowthService")
-local DataStoreService = requireModuleFrom(servicesFolder, "DataStoreService")
+local SmashService = requireModuleFrom(servicesFolder, "SmashService")
+local WorldService = requireModuleFrom(servicesFolder, "WorldService")
+local DataService = requireModuleFrom(servicesFolder, "DataStoreService")
 
-if not MapBootstrapService or not SizeService or not TreadmillService or not GateService or not MovementGrowthService then
-	warn(STARTUP_TAG, "One or more core services failed to load. Aborting startup.")
+if not (MapBootstrapService and EffectsService and SizeService and CurrencyService and UpgradeService and TreadmillService and GateService and MovementGrowthService and SmashService and WorldService) then
+	warn(STARTUP_TAG, "Failed to load one or more services")
 	return
 end
 
-local feedbackEvent = Remotes.getFeedbackEvent()
-
-print(STARTUP_TAG, "Initializing map bootstrap")
-local mapOk, mapErr = pcall(function()
-	MapBootstrapService.Init()
-end)
-if not mapOk then
-	warn(STARTUP_TAG, "MapBootstrapService.Init failed:", mapErr)
-	return
-end
-
-local generatedMap = Workspace:FindFirstChild("GeneratedMap")
-if not generatedMap then
-	generatedMap = waitForChildWithTimeout(Workspace, "GeneratedMap", 5)
-end
-if not generatedMap then
-	warn(STARTUP_TAG, "Workspace.GeneratedMap was not created.")
-	return
-end
-print(STARTUP_TAG, "Generated map ready:", generatedMap:GetFullName())
-
-print(STARTUP_TAG, "Initializing gameplay services")
+MapBootstrapService.Init()
 SizeService.Init()
+CurrencyService.Init()
 TreadmillService.Init()
-GateService.Init(SizeService)
-MovementGrowthService.Init(SizeService, TreadmillService)
-print(STARTUP_TAG, "Core services initialized")
+UpgradeService.Init(CurrencyService, EffectsService)
+GateService.Init(SizeService, EffectsService)
+SmashService.Init(SizeService, CurrencyService, UpgradeService, EffectsService)
+WorldService.Init(SizeService, CurrencyService, EffectsService)
+MovementGrowthService.Init(SizeService, TreadmillService, CurrencyService, UpgradeService, EffectsService)
 
-if DataStoreService and type(DataStoreService.Init) == "function" then
+if DataService and type(DataService.Init) == "function" then
 	task.spawn(function()
-		local ok, err = pcall(function()
-			DataStoreService.Init(SizeService)
-		end)
-		if not ok then
-			warn(STARTUP_TAG, "DataStoreService.Init failed (continuing without persistence):", err)
-		else
-			print(STARTUP_TAG, "DataStore service initialized")
-		end
+		DataService.Init(SizeService, CurrencyService)
 	end)
-else
-	warn(STARTUP_TAG, "DataStoreService missing or invalid; continuing without persistence.")
 end
 
-local rebirthPad = generatedMap:FindFirstChild("RebirthPad")
-if rebirthPad and rebirthPad:IsA("BasePart") then
-	print(STARTUP_TAG, "Wiring RebirthPad touch handler")
-	rebirthPad.Touched:Connect(function(hit: BasePart)
-		local character = hit.Parent
-		if not character or not character:IsA("Model") then
-			return
-		end
+Players.PlayerAdded:Connect(function(player)
+	local now = os.time()
+	local nextClaim = (player:GetAttribute(Constants.ATTR_DAILY_NEXT) or 0) :: number
+	if now >= nextClaim then
+		CurrencyService.AddCoins(player, Config.DailyReward.Coins)
+		player:SetAttribute(Constants.ATTR_DAILY_NEXT, now + Config.DailyReward.CooldownSeconds)
+		player:SetAttribute(Constants.ATTR_DAILY_BOOST_UNTIL, now + Config.DailyReward.GrowthBoostSeconds)
+		EffectsService.Feedback(player, "DAILY REWARD!")
+	end
+end)
 
-		local player = Players:GetPlayerFromCharacter(character)
+local rebirthPad = Workspace:WaitForChild("GeneratedMap"):FindFirstChild("RebirthPad", true)
+if rebirthPad and rebirthPad:IsA("BasePart") then
+	rebirthPad.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
 		if not player then
 			return
 		end
-
-		if SizeService.Rebirth(player) then
-			feedbackEvent:FireClient(player, "Rebirth! Multiplier increased.")
-		else
-			feedbackEvent:FireClient(player, string.format("Need size %.0f to rebirth.", Config.RebirthRequiredSize))
+		if not SizeService.Rebirth(player, EffectsService, CurrencyService) then
+			EffectsService.Feedback(player, string.format("REBIRTH READY at %.0f", Config.RebirthRequiredSize))
 		end
 	end)
-else
-	warn(STARTUP_TAG, "RebirthPad missing from GeneratedMap; rebirth interaction disabled.")
 end
 
-print(STARTUP_TAG, "Server startup complete")
+print(STARTUP_TAG, "RUN BIGGER systems online")

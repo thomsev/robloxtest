@@ -1,26 +1,24 @@
 --!strict
 
 local Players = game:GetService("Players")
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Constants = require(Shared.Constants)
 local Util = require(Shared.Util)
 
 local MovementGrowthService = {}
-
 local lastPositions: { [Player]: Vector3 } = {}
 
-function MovementGrowthService.Init(sizeService, treadmillService)
+function MovementGrowthService.Init(sizeService, treadmillService, currencyService, upgradeService, effectsService)
 	task.spawn(function()
 		while true do
 			for _, player in ipairs(Players:GetPlayers()) do
-				local character = Util.getCharacter(player)
-				local root = Util.getRootPart(character)
+				local root = Util.getRootPart(Util.getCharacter(player))
 				if not root then
 					continue
 				end
-
 				local currentPos = root.Position
 				local lastPos = lastPositions[player]
 				lastPositions[player] = currentPos
@@ -29,19 +27,16 @@ function MovementGrowthService.Init(sizeService, treadmillService)
 				end
 
 				local distance = (currentPos - lastPos).Magnitude
-				if distance <= 0 then
+				if distance <= 0 or distance > Config.AntiExploit.MaxDistancePerTick then
 					continue
 				end
 
-				if distance > Config.AntiExploit.MaxDistancePerTick then
-					continue
-				end
-
-				local multiplier = treadmillService.GetMultiplier(player) * sizeService.GetRebirthMultiplier(player)
-				local growthDelta = distance * Config.GrowthPerMeter * multiplier
-				sizeService.AddSize(player, growthDelta)
+				local boostMultiplier = treadmillService.GetMultiplier(player)
+				local dailyMultiplier = if ((player:GetAttribute(Constants.ATTR_DAILY_BOOST_UNTIL) or 0) :: number) > os.time() then Config.DailyReward.GrowthMultiplier else 1
+				local growthDelta = distance * Config.GrowthPerMeter * boostMultiplier * sizeService.GetRebirthMultiplier(player) * upgradeService.GrowthMultiplier(player) * dailyMultiplier
+				sizeService.AddSize(player, growthDelta, effectsService, upgradeService)
+				currencyService.AddCoins(player, math.floor(distance * Config.DistanceCoinsPerMeter))
 			end
-
 			Util.safeWait(Config.AntiExploit.TickRateSeconds)
 		end
 	end)
