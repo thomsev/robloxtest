@@ -1,0 +1,31 @@
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Roblox Studio place/model exports
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Rojo outputs and local build artifacts
+sourcemap.json
+*.map.json
+build/
+dist/
+out/
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
+
+# Local JSON dumps/artifacts (keep core project config tracked)
+*.json
+!default.project.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!*.project.json
