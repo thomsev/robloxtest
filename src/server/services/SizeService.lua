@@ -61,7 +61,17 @@ function SizeService.ApplyScaling(player: Player, upgradeService)
 	if upgradeService then
 		speedBonus = upgradeService.SpeedBonus(player)
 	end
-	humanoid.WalkSpeed = Util.clamp(Config.BaseWalkSpeed + (size * 0.05) + speedBonus, Config.BaseWalkSpeed, Config.MaxWalkSpeed)
+	local worldLevel = (player:GetAttribute(Constants.ATTR_WORLD) or 0) :: number
+	local rebirths = (player:GetAttribute(Constants.ATTR_REBIRTHS) or 0) :: number
+	local dynamicSpeed = Config.BaseWalkSpeed
+		+ (size * Config.SpeedDifficulty.PerSize)
+		+ (worldLevel * Config.SpeedDifficulty.PerWorldLevel)
+		+ (rebirths * Config.SpeedDifficulty.PerRebirth)
+		+ speedBonus
+	humanoid.WalkSpeed = Util.clamp(dynamicSpeed, Config.BaseWalkSpeed, Config.MaxWalkSpeed)
+
+	local jumpAssist = if upgradeService then upgradeService.JumpAssistBonus(player) else 0
+	humanoid.JumpPower = Util.clamp(50 - worldLevel * Config.SpeedDifficulty.JumpPowerPenaltyPerWorld + jumpAssist, 34, 54)
 end
 
 function SizeService.SetSize(player: Player, value: number, effectsService, upgradeService)
@@ -112,6 +122,9 @@ function SizeService.Rebirth(player: Player, effectsService, currencyService): b
 	SizeService.SetSize(player, Config.RebirthSizeReset, effectsService)
 	player:SetAttribute(Constants.ATTR_GOD_MODE_UNTIL, os.clock() + Config.RebirthGodModeSeconds)
 	currencyService.AddCoins(player, 200 + rebirths * 30)
+	currencyService.AddTokens(player, 8 + rebirths * 2)
+	player:SetAttribute(Constants.ATTR_CHECKPOINT, "")
+	player:SetAttribute(Constants.ATTR_WORLD_UNLOCK, math.min(#Config.Worlds, math.max((player:GetAttribute(Constants.ATTR_WORLD_UNLOCK) or 1) :: number, 1 + rebirths)))
 
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
@@ -121,7 +134,7 @@ function SizeService.Rebirth(player: Player, effectsService, currencyService): b
 		end
 	end
 
-	effectsService.Feedback(player, "REBIRTH READY?! BOOM!")
+	effectsService.Feedback(player, "REBIRTH BLAST! Worlds + Chaos boosted")
 	effectsService.Emit(player, "Rebirth", { Rebirths = rebirths, GodModeSeconds = Config.RebirthGodModeSeconds })
 	return true
 end
@@ -133,6 +146,7 @@ function SizeService.Init()
 			{ Constants.ATTR_REBIRTHS, 0 },
 			{ Constants.ATTR_SIZE_TIER, "Tiny" },
 			{ Constants.ATTR_BEST_SIZE, 1 },
+			{ Constants.ATTR_WORLD_UNLOCK, 1 },
 		}) do
 			if player:GetAttribute(pair[1]) == nil then
 				player:SetAttribute(pair[1], pair[2])
@@ -147,6 +161,7 @@ function SizeService.Init()
 			{ Constants.ATTR_SIZE, "NumberValue" },
 			{ Constants.ATTR_REBIRTHS, "IntValue" },
 			{ Constants.ATTR_COINS, "IntValue" },
+			{ Constants.ATTR_SMASH_TOKENS, "IntValue" },
 		}) do
 			local value = Instance.new(info[2])
 			value.Name = info[1]

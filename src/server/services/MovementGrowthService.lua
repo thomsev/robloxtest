@@ -10,6 +10,7 @@ local Util = require(Shared.Util)
 
 local MovementGrowthService = {}
 local lastPositions: { [Player]: Vector3 } = {}
+local lastPulse: { [Player]: number } = {}
 
 function MovementGrowthService.Init(sizeService, treadmillService, currencyService, upgradeService, effectsService)
 	task.spawn(function()
@@ -36,6 +37,13 @@ function MovementGrowthService.Init(sizeService, treadmillService, currencyServi
 				local growthDelta = distance * Config.GrowthPerMeter * boostMultiplier * sizeService.GetRebirthMultiplier(player) * upgradeService.GrowthMultiplier(player) * dailyMultiplier
 				sizeService.AddSize(player, growthDelta, effectsService, upgradeService)
 				currencyService.AddCoins(player, math.floor(distance * Config.DistanceCoinsPerMeter))
+
+				local now = os.clock()
+				if not lastPulse[player] or now - lastPulse[player] >= Config.PassiveCoinPulseSeconds then
+					lastPulse[player] = now
+					currencyService.AddCoins(player, Config.PassiveCoinPulseAmount)
+					effectsService.Feedback(player, "+5 coin streak")
+				end
 			end
 			Util.safeWait(Config.AntiExploit.TickRateSeconds)
 		end
@@ -43,6 +51,7 @@ function MovementGrowthService.Init(sizeService, treadmillService, currencyServi
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastPositions[player] = nil
+		lastPulse[player] = nil
 	end)
 end
 
