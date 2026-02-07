@@ -18,6 +18,12 @@ local function attrForUpgrade(upgradeName: string): string?
 		return Constants.ATTR_GROWTH_LEVEL
 	elseif upgradeName == "SmashMultiplier" then
 		return Constants.ATTR_SMASH_LEVEL
+	elseif upgradeName == "JumpAssist" then
+		return "JumpAssistLevel"
+	elseif upgradeName == "KnockbackResist" then
+		return "KnockbackResistLevel"
+	elseif upgradeName == "TrailFx" then
+		return "TrailFxLevel"
 	end
 	return nil
 end
@@ -57,6 +63,14 @@ function UpgradeService.SmashMultiplier(player: Player): number
 	return 1 + level * Config.Upgrades.SmashMultiplier.PerLevel
 end
 
+function UpgradeService.JumpAssistBonus(player: Player): number
+	return UpgradeService.GetLevel(player, "JumpAssist") * Config.Upgrades.JumpAssist.PerLevel
+end
+
+function UpgradeService.KnockbackResistance(player: Player): number
+	return UpgradeService.GetLevel(player, "KnockbackResist") * Config.Upgrades.KnockbackResist.PerLevel
+end
+
 function UpgradeService.TryPurchase(player: Player, upgradeName: string, currencyService, effectsService): boolean
 	local cfg = Config.Upgrades[upgradeName]
 	local attr = attrForUpgrade(upgradeName)
@@ -71,8 +85,14 @@ function UpgradeService.TryPurchase(player: Player, upgradeName: string, currenc
 	end
 
 	local cost = UpgradeService.GetCost(player, upgradeName)
-	if not currencyService.TrySpend(player, cost) then
-		effectsService.Feedback(player, "Not enough coins!")
+	local okSpend = false
+	if upgradeName == "TrailFx" then
+		okSpend = currencyService.TrySpendTokens(player, cost)
+	else
+		okSpend = currencyService.TrySpend(player, cost)
+	end
+	if not okSpend then
+		effectsService.Feedback(player, upgradeName == "TrailFx" and "Need Smash Tokens!" or "Not enough coins!")
 		return false
 	end
 

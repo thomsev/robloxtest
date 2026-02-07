@@ -12,6 +12,10 @@ function CurrencyService.GetCoins(player: Player): number
 	return ((player:GetAttribute(Constants.ATTR_COINS) or 0) :: number)
 end
 
+function CurrencyService.GetTokens(player: Player): number
+	return ((player:GetAttribute(Constants.ATTR_SMASH_TOKENS) or 0) :: number)
+end
+
 function CurrencyService.SetCoins(player: Player, amount: number)
 	local coins = math.max(0, math.floor(amount))
 	player:SetAttribute(Constants.ATTR_COINS, coins)
@@ -25,11 +29,30 @@ function CurrencyService.SetCoins(player: Player, amount: number)
 	end
 end
 
+function CurrencyService.SetTokens(player: Player, amount: number)
+	local tokens = math.max(0, math.floor(amount))
+	player:SetAttribute(Constants.ATTR_SMASH_TOKENS, tokens)
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats then
+		local tokenValue = leaderstats:FindFirstChild(Constants.ATTR_SMASH_TOKENS)
+		if tokenValue and tokenValue:IsA("IntValue") then
+			tokenValue.Value = tokens
+		end
+	end
+end
+
 function CurrencyService.AddCoins(player: Player, amount: number)
 	if amount <= 0 then
 		return
 	end
 	CurrencyService.SetCoins(player, CurrencyService.GetCoins(player) + amount)
+end
+
+function CurrencyService.AddTokens(player: Player, amount: number)
+	if amount <= 0 then
+		return
+	end
+	CurrencyService.SetTokens(player, CurrencyService.GetTokens(player) + amount)
 end
 
 function CurrencyService.TrySpend(player: Player, amount: number): boolean
@@ -44,10 +67,25 @@ function CurrencyService.TrySpend(player: Player, amount: number): boolean
 	return true
 end
 
+function CurrencyService.TrySpendTokens(player: Player, amount: number): boolean
+	if amount <= 0 then
+		return true
+	end
+	local tokens = CurrencyService.GetTokens(player)
+	if tokens < amount then
+		return false
+	end
+	CurrencyService.SetTokens(player, tokens - amount)
+	return true
+end
+
 function CurrencyService.Init()
 	Players.PlayerAdded:Connect(function(player)
 		if player:GetAttribute(Constants.ATTR_COINS) == nil then
 			player:SetAttribute(Constants.ATTR_COINS, 0)
+		end
+		if player:GetAttribute(Constants.ATTR_SMASH_TOKENS) == nil then
+			player:SetAttribute(Constants.ATTR_SMASH_TOKENS, 0)
 		end
 	end)
 end

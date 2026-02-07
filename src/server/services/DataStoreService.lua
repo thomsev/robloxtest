@@ -8,7 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Constants = require(Shared.Constants)
 
-local STORE = DataStoreService:GetDataStore("RunBigger_PlayerData_v2")
+local STORE = DataStoreService:GetDataStore("RunBigger_PlayerData_v3")
 
 local DataService = {}
 
@@ -16,13 +16,18 @@ local persistedAttrs = {
 	Constants.ATTR_SIZE,
 	Constants.ATTR_REBIRTHS,
 	Constants.ATTR_COINS,
+	Constants.ATTR_SMASH_TOKENS,
 	Constants.ATTR_WORLD,
+	Constants.ATTR_WORLD_UNLOCK,
 	Constants.ATTR_SPEED_LEVEL,
 	Constants.ATTR_GROWTH_LEVEL,
 	Constants.ATTR_SMASH_LEVEL,
 	Constants.ATTR_DAILY_NEXT,
 	Constants.ATTR_DAILY_BOOST_UNTIL,
 	Constants.ATTR_BEST_SIZE,
+	"JumpAssistLevel",
+	"KnockbackResistLevel",
+	"TrailFxLevel",
 }
 
 local function keyForPlayer(player: Player): string
@@ -58,6 +63,7 @@ function DataService.Init(sizeService, currencyService)
 		DataService.LoadPlayer(player)
 		sizeService.SetSize(player, (player:GetAttribute(Constants.ATTR_SIZE) or 1) :: number)
 		currencyService.SetCoins(player, (player:GetAttribute(Constants.ATTR_COINS) or 0) :: number)
+		currencyService.SetTokens(player, (player:GetAttribute(Constants.ATTR_SMASH_TOKENS) or 0) :: number)
 	end)
 
 	Players.PlayerRemoving:Connect(DataService.SavePlayer)
