@@ -2,15 +2,28 @@
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Constants = require(Shared.Constants)
 
-local STORE = DataStoreService:GetDataStore("RunGrowObby_PlayerData_v1")
+local STORE = DataStoreService:GetDataStore("RunBigger_PlayerData_v2")
 
 local DataService = {}
+
+local persistedAttrs = {
+	Constants.ATTR_SIZE,
+	Constants.ATTR_REBIRTHS,
+	Constants.ATTR_COINS,
+	Constants.ATTR_WORLD,
+	Constants.ATTR_SPEED_LEVEL,
+	Constants.ATTR_GROWTH_LEVEL,
+	Constants.ATTR_SMASH_LEVEL,
+	Constants.ATTR_DAILY_NEXT,
+	Constants.ATTR_DAILY_BOOST_UNTIL,
+	Constants.ATTR_BEST_SIZE,
+}
 
 local function keyForPlayer(player: Player): string
 	return "player_" .. tostring(player.UserId)
@@ -20,44 +33,34 @@ function DataService.LoadPlayer(player: Player)
 	local ok, data = pcall(function()
 		return STORE:GetAsync(keyForPlayer(player))
 	end)
-	if not ok then
-		warn("Failed to load player data:", player.UserId, data)
+	if not ok or type(data) ~= "table" then
 		return
 	end
-
-	if type(data) == "table" then
-		if type(data.Size) == "number" then
-			player:SetAttribute(Constants.ATTR_SIZE, data.Size)
-		end
-		if type(data.Rebirths) == "number" then
-			player:SetAttribute(Constants.ATTR_REBIRTHS, data.Rebirths)
+	for _, attr in ipairs(persistedAttrs) do
+		if type(data[attr]) == "number" or type(data[attr]) == "string" then
+			player:SetAttribute(attr, data[attr])
 		end
 	end
 end
 
 function DataService.SavePlayer(player: Player)
-	local payload = {
-		Size = player:GetAttribute(Constants.ATTR_SIZE) or 1,
-		Rebirths = player:GetAttribute(Constants.ATTR_REBIRTHS) or 0,
-	}
-
-	local ok, err = pcall(function()
+	local payload = {}
+	for _, attr in ipairs(persistedAttrs) do
+		payload[attr] = player:GetAttribute(attr)
+	end
+	pcall(function()
 		STORE:SetAsync(keyForPlayer(player), payload)
 	end)
-	if not ok then
-		warn("Failed to save player data:", player.UserId, err)
-	end
 end
 
-function DataService.Init(sizeService)
+function DataService.Init(sizeService, currencyService)
 	Players.PlayerAdded:Connect(function(player)
 		DataService.LoadPlayer(player)
 		sizeService.SetSize(player, (player:GetAttribute(Constants.ATTR_SIZE) or 1) :: number)
+		currencyService.SetCoins(player, (player:GetAttribute(Constants.ATTR_COINS) or 0) :: number)
 	end)
 
-	Players.PlayerRemoving:Connect(function(player)
-		DataService.SavePlayer(player)
-	end)
+	Players.PlayerRemoving:Connect(DataService.SavePlayer)
 
 	task.spawn(function()
 		while true do

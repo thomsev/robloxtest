@@ -18,17 +18,33 @@ local function getFolder(): Folder
 	return folder
 end
 
-function Remotes.getFeedbackEvent(): RemoteEvent
+local function getRemoteEvent(name: string): RemoteEvent
 	local folder = getFolder()
-	local existing = folder:FindFirstChild(Constants.FEEDBACK_EVENT)
+	local existing = folder:FindFirstChild(name)
 	if existing and existing:IsA("RemoteEvent") then
 		return existing
 	end
 
 	local remote = Instance.new("RemoteEvent")
-	remote.Name = Constants.FEEDBACK_EVENT
+	remote.Name = name
 	remote.Parent = folder
 	return remote
+end
+
+function Remotes.getFeedbackEvent(): RemoteEvent
+	return getRemoteEvent(Constants.FEEDBACK_EVENT)
+end
+
+function Remotes.getEffectsEvent(): RemoteEvent
+	return getRemoteEvent(Constants.EFFECTS_EVENT)
+end
+
+function Remotes.getUpgradeRequestEvent(): RemoteEvent
+	return getRemoteEvent(Constants.UPGRADE_REQUEST)
+end
+
+function Remotes.getStompRequestEvent(): RemoteEvent
+	return getRemoteEvent(Constants.STOMP_REQUEST)
 end
 
 return Remotes
