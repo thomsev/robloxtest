@@ -11,7 +11,7 @@ local Util = require(Shared.Util)
 local HUD = {}
 
 local function getNextGate(size: number): number?
-	for _, requirement in Config.GateRequirements do
+	for _, requirement in ipairs(Config.GateRequirements) do
 		if size < requirement then
 			return requirement
 		end

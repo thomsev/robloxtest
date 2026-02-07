@@ -62,14 +62,14 @@ function DataService.Init(sizeService)
 	task.spawn(function()
 		while true do
 			task.wait(Config.AutoSaveSeconds)
-			for _, player in Players:GetPlayers() do
+			for _, player in ipairs(Players:GetPlayers()) do
 				DataService.SavePlayer(player)
 			end
 		end
 	end)
 
 	game:BindToClose(function()
-		for _, player in Players:GetPlayers() do
+		for _, player in ipairs(Players:GetPlayers()) do
 			DataService.SavePlayer(player)
 		end
 	end)

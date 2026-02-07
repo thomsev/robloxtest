@@ -56,7 +56,7 @@ local function wireGate(gate: BasePart, sizeService)
 end
 
 function GateService.Init(sizeService)
-	for _, instance in CollectionService:GetTagged("SizeGate") do
+	for _, instance in ipairs(CollectionService:GetTagged("SizeGate")) do
 		if instance:IsA("BasePart") then
 			wireGate(instance, sizeService)
 		end

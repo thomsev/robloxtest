@@ -76,7 +76,7 @@ function MapBootstrapService.Init()
 		end
 	end
 
-	for i, required in Config.GateRequirements do
+	for i, required in ipairs(Config.GateRequirements) do
 		local gateModel = Instance.new("Model")
 		gateModel.Name = "Gate_" .. i
 		gateModel.Parent = map

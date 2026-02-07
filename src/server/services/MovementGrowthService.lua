@@ -14,7 +14,7 @@ local lastPositions: { [Player]: Vector3 } = {}
 function MovementGrowthService.Init(sizeService, treadmillService)
 	task.spawn(function()
 		while true do
-			for _, player in Players:GetPlayers() do
+			for _, player in ipairs(Players:GetPlayers()) do
 				local character = Util.getCharacter(player)
 				local root = Util.getRootPart(character)
 				if not root then
