@@ -1,68 +1,33 @@
-# Run → Grow Obby (Rojo + Roblox Studio)
+# The Growth Run
 
-MVP Roblox obby where players grow by moving, pass size-gated obstacles, get treadmill growth boosts, and can rebirth for a permanent growth multiplier.
+A single intentional Roblox world with a clear start → middle → end path.
 
-## Features
-- **Distance-based growth** (server authoritative).
-- **Size gates** with server teleport-back enforcement.
-- **Treadmills** tagged with `CollectionService` that boost growth.
-- **Rebirth pad** with size requirement and multiplier progression.
-- **Generated map** on server start (playable immediately).
-- **Leaderstats** for Size + Rebirths.
-- **Data persistence** with resilient DataStore saves.
+## Design intent
+- One clean forward route on +Z with gradual height progression.
+- Visual guidance via arrows + signs in every section.
+- Mechanics taught in order: movement, gaps, speed control, NPC interference, final climb.
+- Checkpoints placed after tense moments so falls are readable, not punishing.
 
-## Project structure
-- `src/shared`: config/constants/util/remotes
-- `src/server`: bootstrap + gameplay services
-- `src/client`: HUD and toast feedback
+## Section flow
+1. **Start Platform**: safe intro, obvious direction, first checkpoint quickly.
+2. **Onboarding**: wide ramps, no gaps, teaches movement/growth.
+3. **Intro Gaps**: small jumps + safe lane + risk bonus lane.
+4. **Speed Control**: downhill narrower ramps, speed is the challenge.
+5. **Interaction**: Bully Bots shove small players / smashable by big players.
+6. **Final Climb + Finish**: narrow vertical beams into reward platform.
 
-## Setup
-1. Install [Aftman](https://aftman.dev) (optional) and Rojo.
-2. Install Rojo directly if needed:
-   - `cargo install rojo`
-3. Clone this repo and open in VS Code.
-4. Start Rojo server in project root:
-   - `rojo serve`
-5. In Roblox Studio:
-   - Install the Rojo plugin.
-   - Open any place.
-   - Connect plugin to `localhost:34872`.
-6. Press **Play** (or Start Server test described below).
+## Architecture
+### Server
+- `MapBootstrapService` clears old map and builds exactly one `workspace.GeneratedMap`.
+- `WorldBuilder` executes section builders sequentially using cursor CFrames.
+- `section_builders/*` each take start CFrame and return end CFrame.
+- `GrowthService`, `CheckpointService`, `NPCService`, `SmashService` handle runtime gameplay.
+- `DataStoreService` is Studio-safe no-op and never blocks boot.
 
-## Testing in Studio
-### Single-player smoke test
-1. Spawn into `GeneratedMap`.
-2. Run forward on the track: **Size should increase** steadily.
-3. Enter first gate while too small: **you should be teleported back** and see toast.
-4. Step on treadmill areas: growth should feel faster.
-5. Reach end and touch rebirth pad at size >= 100: rebirth triggers and size resets.
+### Client
+- `UIService`, `CameraService`, `FeedbackService` for clarity and feel.
 
-### Multiplayer test (recommended)
-1. In Studio Test tab, click **Start Server** with **2 Players**.
-2. Verify both players grow independently.
-3. Confirm gate checks are per-player and server-enforced.
-4. Confirm treadmill boost is only applied to players touching treadmill.
-5. Verify data saves by stopping test and re-running (Studio API access may be required for DataStore).
-
-## Tuning defaults
-Tweak in `src/shared/Config.lua`:
-- `GrowthPerMeter`
-- `TreadmillBoostMultiplier`
-- `MaxSize`
-- `GateRequirements`
-- `RebirthRequiredSize`
-- `AntiExploit` limits
-
-## LEGO/toy-brick style notes
-Current map uses bright primary colors + studs surfaces + a few lightweight stud bump parts.
-
-To swap in richer visuals later without gameplay code changes:
-1. Add `SurfaceAppearance` or textures to map parts in Studio.
-2. Keep part names/tags/attributes the same (`SizeGate`, `Treadmill`, `RequiredSize`, `BoostMultiplier`).
-3. If replacing generated map with a handcrafted one, still include `GeneratedMap` model or disable bootstrap.
-
-## Security notes
-- Clients never set Size/Rebirth values.
-- Server computes movement growth and clamps exploit-like spikes.
-- Growth delta is clamped per tick.
-- Size scaling is throttled and re-applied on respawn.
+## Run
+1. `rojo serve`
+2. Connect in Roblox Studio.
+3. Play The Growth Run.

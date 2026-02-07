@@ -14,20 +14,16 @@ local HUD = {}
 local upgradeEvent = Remotes.getUpgradeRequestEvent()
 local stompEvent = Remotes.getStompRequestEvent()
 
-local function nextGoal(size: number): number
-	local best = Config.RebirthRequiredSize
+local function objectiveText(size: number, rebirths: number, unlock: number): string
 	for _, world in ipairs(Config.Worlds) do
-		if size < world.PortalRequirement then
-			return world.PortalRequirement
+		if unlock < world.Id then
+			return string.format("Grow to %.0f and rebirth %d for %s", world.PortalRequirement, world.RequiredRebirth, world.Name)
 		end
 	end
-	for _, tier in ipairs(Config.SizeTiers) do
-		if size < tier.Min then
-			best = tier.Min
-			break
-		end
+	if size < Config.RebirthRequiredSize then
+		return string.format("Reach %.0f size and REBIRTH", Config.RebirthRequiredSize)
 	end
-	return best
+	return string.format("Rebirth now to raise chaos power (R%d)", rebirths)
 end
 
 function HUD.Init()
@@ -38,7 +34,7 @@ function HUD.Init()
 	gui.Parent = player:WaitForChild("PlayerGui")
 
 	local root = Instance.new("Frame")
-	root.Size = UDim2.fromOffset(360, 210)
+	root.Size = UDim2.fromOffset(390, 270)
 	root.Position = UDim2.fromOffset(16, 16)
 	root.BackgroundColor3 = Color3.fromRGB(20, 22, 33)
 	root.BackgroundTransparency = 0.18
@@ -50,14 +46,14 @@ function HUD.Init()
 	title.Position = UDim2.fromOffset(8, 4)
 	title.BackgroundTransparency = 1
 	title.Font = Enum.Font.FredokaOne
-	title.Text = "RUN BIGGER!"
+	title.Text = "RUN • SMASH • CLIMB"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
 	title.TextScaled = true
 	title.Parent = root
 
 	local sizeBarBg = Instance.new("Frame")
-	sizeBarBg.Size = UDim2.fromOffset(340, 24)
-	sizeBarBg.Position = UDim2.fromOffset(10, 44)
+	sizeBarBg.Size = UDim2.fromOffset(366, 24)
+	sizeBarBg.Position = UDim2.fromOffset(12, 42)
 	sizeBarBg.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
 	sizeBarBg.BorderSizePixel = 0
 	sizeBarBg.Parent = root
@@ -69,8 +65,8 @@ function HUD.Init()
 	sizeBar.Parent = sizeBarBg
 
 	local info = Instance.new("TextLabel")
-	info.Size = UDim2.fromOffset(340, 72)
-	info.Position = UDim2.fromOffset(10, 75)
+	info.Size = UDim2.fromOffset(366, 92)
+	info.Position = UDim2.fromOffset(12, 74)
 	info.BackgroundTransparency = 1
 	info.TextXAlignment = Enum.TextXAlignment.Left
 	info.TextYAlignment = Enum.TextYAlignment.Top
@@ -79,12 +75,12 @@ function HUD.Init()
 	info.TextScaled = true
 	info.Parent = root
 
-	local buttons = { "RunSpeed", "GrowthRate", "SmashMultiplier" }
+	local buttons = { "RunSpeed", "GrowthRate", "SmashMultiplier", "JumpAssist", "KnockbackResist", "TrailFx" }
 	for i, key in ipairs(buttons) do
 		local button = Instance.new("TextButton")
-		button.Size = UDim2.fromOffset(108, 28)
-		button.Position = UDim2.fromOffset(10 + (i - 1) * 116, 152)
-		button.BackgroundColor3 = Color3.fromRGB(255, 170, 70)
+		button.Size = UDim2.fromOffset(120, 28)
+		button.Position = UDim2.fromOffset(12 + ((i - 1) % 3) * 126, 172 + math.floor((i - 1) / 3) * 34)
+		button.BackgroundColor3 = key == "TrailFx" and Color3.fromRGB(255, 125, 225) or Color3.fromRGB(255, 170, 70)
 		button.Text = "+ " .. key
 		button.Font = Enum.Font.FredokaOne
 		button.TextScaled = true
@@ -95,8 +91,8 @@ function HUD.Init()
 	end
 
 	local stompButton = Instance.new("TextButton")
-	stompButton.Size = UDim2.fromOffset(340, 28)
-	stompButton.Position = UDim2.fromOffset(10, 184)
+	stompButton.Size = UDim2.fromOffset(366, 28)
+	stompButton.Position = UDim2.fromOffset(12, 240)
 	stompButton.BackgroundColor3 = Color3.fromRGB(255, 90, 90)
 	stompButton.Text = "GIANT STOMP"
 	stompButton.Font = Enum.Font.FredokaOne
@@ -110,16 +106,17 @@ function HUD.Init()
 		local size = (player:GetAttribute(Constants.ATTR_SIZE) or 1) :: number
 		local rebirths = (player:GetAttribute(Constants.ATTR_REBIRTHS) or 0) :: number
 		local coins = (player:GetAttribute(Constants.ATTR_COINS) or 0) :: number
+		local tokens = (player:GetAttribute(Constants.ATTR_SMASH_TOKENS) or 0) :: number
 		local tier = (player:GetAttribute(Constants.ATTR_SIZE_TIER) or "Tiny") :: string
-		local goal = nextGoal(size)
+		local unlock = (player:GetAttribute(Constants.ATTR_WORLD_UNLOCK) or 1) :: number
 
-		info.Text = string.format("Size %.1f (%s)\nCoins %d  Rebirths %d\nNEXT GOAL: %.0f", size, tier, coins, rebirths, goal)
-		local alpha = math.clamp(size / goal, 0, 1)
+		info.Text = string.format("Size %.1f (%s)  Rebirth %d\nCoins %d  Smash Tokens %d\nNEXT: %s", size, tier, rebirths, coins, tokens, objectiveText(size, rebirths, unlock))
+		local alpha = math.clamp(size / Config.RebirthRequiredSize, 0, 1)
 		TweenService:Create(sizeBar, TweenInfo.new(0.2), { Size = UDim2.fromScale(alpha, 1) }):Play()
 	end
 
 	refresh()
-	for _, attr in ipairs({ Constants.ATTR_SIZE, Constants.ATTR_REBIRTHS, Constants.ATTR_COINS, Constants.ATTR_SIZE_TIER }) do
+	for _, attr in ipairs({ Constants.ATTR_SIZE, Constants.ATTR_REBIRTHS, Constants.ATTR_COINS, Constants.ATTR_SMASH_TOKENS, Constants.ATTR_SIZE_TIER, Constants.ATTR_WORLD_UNLOCK }) do
 		player:GetAttributeChangedSignal(attr):Connect(refresh)
 	end
 end
