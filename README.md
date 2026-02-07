@@ -1,26 +1,40 @@
-# Run → Grow → Smash Front-Page Loop (Rojo + Roblox Studio)
+# The Growth Tower (single-world redesign)
 
-This project is now structured like a front-page retention game: players spawn in a social lobby, choose worlds through portals, climb vertical speed-based obbies, smash interferers for premium currency, and rebirth for long-term power.
+This game is now one intentional, complete Roblox experience: **a single LEGO-style vertical tower** with six handcrafted sections and one core loop.
 
-## Session loop (10–20 min target)
-1. **Lobby (0–60s):** instant growth via treadmills + movement pulse rewards, clear objective in HUD, visible giant players.
-2. **World run (1–6 min):** stacked vertical levels, narrower high lanes, tighter jumps as speed rises.
-3. **Chaos moments:** NPC interferers shove small players; big players smash NPCs for Smash Tokens.
-4. **Checkpoint loop:** fail a jump → back to latest checkpoint, not full reset.
-5. **Completion + unlock:** world finish grants coins and unlocks next portal progression.
-6. **Rebirth spectacle:** reset size, keep mastery/upgrades/currencies, unlock deeper worlds + stronger chaos potential.
+## Core loop (always clear)
+1. Run and grow.
+2. Reach the next checkpoint.
+3. Learn why you failed ("Too fast" / "Jump earlier").
+4. Retry from the last checkpoint.
+5. Reach summit for a big payoff.
 
-## Progression layers
-- **Physical power:** Size, speed scaling, smash power, stomp.
-- **World progression:** Portal unlocks, vertical world clears, checkpoints.
-- **Long-term progression:** Rebirths, Smash Tokens, cosmetics/assist upgrades.
+## Why each section exists
+1. **Onboarding** — wide pads and tiny gaps teach movement + jumping fast.
+2. **Control Challenge** — speed starts becoming dangerous on narrower curves.
+3. **Jump Timing** — safe lane plus risky bonus lane teaches precision choice.
+4. **Interference** — Bully Bots add shove/smash chaos with readable rules.
+5. **Mastery Climb** — steep narrow climb combines all previous skills.
+6. **Summit Moment** — open reward platform and celebration burst.
 
-## Current architecture
-- **Server-authoritative:** size, speed, currency, portals, checkpoints, smashing, collision knockback.
-- **Client-authoritative only for:** UI, visual effects, feedback.
-- **CollectionService tags used for:** `WorldPortal`, `Treadmill`, `Checkpoint`, `Smashable`, `InterfererNPC`, `CollisionZone`.
+## Architecture
+### Server
+- `WorldBuilder` - builds Growth Tower section-by-section.
+- `SectionConfig` - tuning per section.
+- `GrowthService` - movement growth, speed scaling, reward pulse.
+- `CheckpointService` - checkpoint state + fall recovery + failure feedback.
+- `NPCService` - Bully Bot patrol movement.
+- `SmashService` - NPC shove/smash and risk-lane bonus logic.
+
+### Client
+- `UIService` - next checkpoint + risk-lane HUD.
+- `CameraService` - subtle pullback as difficulty rises.
+- `FeedbackService` - sounds and toasts.
+
+### Shared
+- `Config`, `Constants`, `Util`, `Remotes`.
 
 ## Run
 1. `rojo serve`
-2. Connect from Roblox Studio via Rojo plugin.
-3. Play (recommended multiplayer server test for collision chaos + NPC interference).
+2. Connect from Roblox Studio.
+3. Play and climb the tower.
