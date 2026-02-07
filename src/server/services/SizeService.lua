@@ -48,7 +48,7 @@ function SizeService.ApplyScaling(player: Player)
 		"HeadScale",
 	}
 
-	for _, scaleName in scales do
+	for _, scaleName in ipairs(scales) do
 		local scaleValue = humanoid:FindFirstChild(scaleName)
 		if scaleValue and scaleValue:IsA("NumberValue") then
 			scaleValue.Value = bodyScale

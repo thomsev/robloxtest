@@ -49,8 +49,16 @@ function TreadmillService.GetMultiplier(player: Player): number
 		return 1
 	end
 
-	for _, part in CollectionService:GetTagged("Treadmill") do
-		if part:IsA("BasePart") and root.Position:FuzzyEq(part.Position, part.Size.Magnitude / 1.2) then
+	for _, part in ipairs(CollectionService:GetTagged("Treadmill")) do
+		if part:IsA("BasePart") then
+			local localPos = part.CFrame:PointToObjectSpace(root.Position)
+			local insideBounds = math.abs(localPos.X) <= (part.Size.X / 2)
+				and math.abs(localPos.Y) <= (part.Size.Y / 2) + 3
+				and math.abs(localPos.Z) <= (part.Size.Z / 2)
+			if not insideBounds then
+				continue
+			end
+
 			local boost = part:GetAttribute("BoostMultiplier")
 			if type(boost) == "number" then
 				return boost
@@ -62,7 +70,7 @@ function TreadmillService.GetMultiplier(player: Player): number
 end
 
 function TreadmillService.Init()
-	for _, instance in CollectionService:GetTagged("Treadmill") do
+	for _, instance in ipairs(CollectionService:GetTagged("Treadmill")) do
 		if instance:IsA("BasePart") then
 			trackPart(instance)
 		end
