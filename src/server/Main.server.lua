@@ -59,9 +59,10 @@ local GateService = requireModuleFrom(servicesFolder, "GateService")
 local MovementGrowthService = requireModuleFrom(servicesFolder, "MovementGrowthService")
 local SmashService = requireModuleFrom(servicesFolder, "SmashService")
 local WorldService = requireModuleFrom(servicesFolder, "WorldService")
+local MonsterService = requireModuleFrom(servicesFolder, "MonsterService")
 local DataService = requireModuleFrom(servicesFolder, "DataStoreService")
 
-if not (MapBootstrapService and EffectsService and SizeService and CurrencyService and UpgradeService and TreadmillService and GateService and MovementGrowthService and SmashService and WorldService) then
+if not (MapBootstrapService and EffectsService and SizeService and CurrencyService and UpgradeService and TreadmillService and GateService and MovementGrowthService and SmashService and WorldService and MonsterService) then
 	warn(STARTUP_TAG, "Failed to load one or more services")
 	return
 end
@@ -74,6 +75,7 @@ UpgradeService.Init(CurrencyService, EffectsService)
 GateService.Init(SizeService, EffectsService)
 SmashService.Init(SizeService, CurrencyService, UpgradeService, EffectsService)
 WorldService.Init(SizeService, CurrencyService, EffectsService)
+MonsterService.Init(EffectsService)
 MovementGrowthService.Init(SizeService, TreadmillService, CurrencyService, UpgradeService, EffectsService)
 
 if DataService and type(DataService.Init) == "function" then

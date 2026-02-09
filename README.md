@@ -6,8 +6,12 @@ MVP Roblox obby where players grow by moving, pass size-gated obstacles, get tre
 - **Distance-based growth** (server authoritative).
 - **Size gates** with server teleport-back enforcement.
 - **Treadmills** tagged with `CollectionService` that boost growth.
+- **More playful tracks** with split-lane boost strips, ramps, jump walls, and jump pads.
+- **Lava + balance-beam challenge sections** that punish missed footing.
+- **Chaser monsters** per world that pursue nearby players and deal contact damage.
 - **Rebirth pad** with size requirement and multiplier progression.
 - **Generated map** on server start (playable immediately).
+- **Per-world visual mood shifts** (client post-processing tint/contrast transitions).
 - **Leaderstats** for Size + Rebirths.
 - **Data persistence** with resilient DataStore saves.
 
@@ -35,7 +39,11 @@ MVP Roblox obby where players grow by moving, pass size-gated obstacles, get tre
 2. Run forward on the track: **Size should increase** steadily.
 3. Enter first gate while too small: **you should be teleported back** and see toast.
 4. Step on treadmill areas: growth should feel faster.
-5. Reach end and touch rebirth pad at size >= 100: rebirth triggers and size resets.
+5. Try jump pads and lane ramps to keep momentum and skip hazards.
+6. Cross balance beams above lava pools without falling.
+7. Jump over wall barriers to stay on pace.
+8. Let a monster spot you and verify it chases and damages on touch.
+9. Reach end and touch rebirth pad at size >= 100: rebirth triggers and size resets.
 
 ### Multiplayer test (recommended)
 1. In Studio Test tab, click **Start Server** with **2 Players**.

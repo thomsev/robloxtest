@@ -59,6 +59,37 @@ local Config = {
 			Length = 460,
 		},
 	},
+
+	WorldVisuals = {
+		Default = {
+			TintColor = Color3.fromRGB(255, 255, 255),
+			Contrast = 0,
+			Saturation = 0,
+			Brightness = 0,
+			BlurSize = 0,
+		},
+		[1] = {
+			TintColor = Color3.fromRGB(255, 248, 228),
+			Contrast = 0.05,
+			Saturation = 0.1,
+			Brightness = 0.03,
+			BlurSize = 0,
+		},
+		[2] = {
+			TintColor = Color3.fromRGB(224, 244, 255),
+			Contrast = 0.08,
+			Saturation = 0.14,
+			Brightness = 0.02,
+			BlurSize = 1,
+		},
+		[3] = {
+			TintColor = Color3.fromRGB(255, 232, 244),
+			Contrast = 0.1,
+			Saturation = 0.18,
+			Brightness = 0.04,
+			BlurSize = 1,
+		},
+	},
 	Smashables = {
 		Crate = { RequiredSize = 20, RewardSize = 1.8, RewardCoins = 18, RespawnSeconds = 10 },
 		Wall = { RequiredSize = 55, RewardSize = 3.8, RewardCoins = 40, RespawnSeconds = 14 },
